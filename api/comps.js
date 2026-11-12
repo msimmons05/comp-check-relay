@@ -2,6 +2,12 @@
 // Env vars: ANTHROPIC_API_KEY, TEAM_PASSWORD (or Team_Password), optional CLAUDE_MODEL.
 import { gate, runClaude, extractJson, num, clean, normSources, CONDITIONS, MODEL } from "../lib/claude.js";
 
+export function cutoff(months) {
+  const d = new Date();
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+
 export function buildPrompt(b) {
   const s = b.subject || {};
   const existing = (Array.isArray(b.existing) ? b.existing : []).slice(0, 25);
@@ -32,7 +38,7 @@ export function buildPrompt(b) {
     ``,
     `SEARCH RULES:`,
     `- Only homes that have actually SOLD (closed). Never use active, pending, or list-price-only listings.`,
-    `- Sold within the last ${num(b.months) || 6} months if possible; extend to 12 months only if you cannot find enough, and say so.`,
+    `- STRICT DATE LIMIT: sold on or after ${cutoff(num(b.months) || 6)} (the last ${num(b.months) || 6} months; today is ${new Date().toISOString().slice(0, 10)}). Never return an older sale, even if you can't find enough comps. If there are too few, return fewer and add a warning.`,
     `- Within about ${num(b.radius) || 1} mile(s) of the subject, same town/neighborhood when possible. The app measures exact distance afterwards.`,
     `- Similar property type, size within about 20% of the subject's square feet, similar bed/bath count and age.`,
     `- Prefer renovated/updated sales for ARV.`,
