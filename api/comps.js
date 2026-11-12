@@ -8,6 +8,7 @@
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2026-10-21";
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+const TEAM_PASSWORD = process.env.TEAM_PASSWORD || process.env.Team_Password || process.env.team_password || "";
 
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -128,14 +129,14 @@ export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method === "GET") {
-    return res.status(200).json({ ok: true, configured: !!(process.env.ANTHROPIC_API_KEY && process.env.TEAM_PASSWORD) });
+    return res.status(200).json({ ok: true, configured: !!(process.env.ANTHROPIC_API_KEY && TEAM_PASSWORD) });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST." });
 
-  if (!process.env.ANTHROPIC_API_KEY || !process.env.TEAM_PASSWORD) {
+  if (!process.env.ANTHROPIC_API_KEY || !TEAM_PASSWORD) {
     return res.status(500).json({ error: "The relay isn't set up yet: add ANTHROPIC_API_KEY and TEAM_PASSWORD in Vercel, then redeploy." });
   }
-  if ((req.headers["x-team-password"] || "") !== process.env.TEAM_PASSWORD) {
+  if ((req.headers["x-team-password"] || "") !== TEAM_PASSWORD) {
     return res.status(401).json({ error: "Wrong team password." });
   }
 
