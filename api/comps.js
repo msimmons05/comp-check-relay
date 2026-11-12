@@ -28,6 +28,7 @@ export function buildPrompt(b) {
     `- Work from "recently sold" list pages for the subject's ZIP/neighborhood: Redfin and Realtor.com first, then Homes.com and Zillow.`,
     `- Record every site where you saw each sale in "sources". If you see a condition hint in list-page remarks, use it; otherwise condition "unknown".`,
     `- Use only facts you actually saw. If a value is not shown, use null. Never invent a sale.`,
+    `- Speed matters: stop searching as soon as you have enough good candidates. Two or three list pages are usually enough.`,
     ``,
     `OUTPUT: reply with ONLY one JSON object (no prose, no markdown fences):`,
     `{"subject":{"beds":number|null,"baths":number|null,"sqft":number|null,"year_built":number|null,"notes":string},`,
@@ -69,8 +70,8 @@ export default async function handler(req, res) {
       prompt: buildPrompt(body),
       maxTokens: 8000,
       tools: [
-        { type: "web_search_20260318", name: "web_search", max_uses: 8, user_location: { type: "approximate", country: "US" } },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 8, max_content_tokens: 25000 },
+        { type: "web_search_20260318", name: "web_search", max_uses: 5, user_location: { type: "approximate", country: "US" } },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 20000 },
       ],
     });
     const parsed = extractJson(text);
