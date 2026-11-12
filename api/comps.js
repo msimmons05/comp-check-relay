@@ -4,6 +4,21 @@ import { gate, runClaude, extractJson, num, clean, normSources, CONDITIONS, MODE
 
 export function buildPrompt(b) {
   const s = b.subject || {};
+  const existing = (Array.isArray(b.existing) ? b.existing : []).slice(0, 25);
+  const inner = num(b.searchedRadius) || 0;
+  const outer = num(b.radius) || 1;
+  const widening = existing.length && inner && outer > inner;
+  const haveBlock = existing.length
+    ? [
+        ``,
+        `ALREADY FOUND (do NOT return these again; they are already verified and on the map):`,
+        ...existing.map((c) => `- ${clean(c.address, 160)}${num(c.sold_price) ? `, sold $${num(c.sold_price)}` : ""}${c.sold_date ? ` on ${clean(c.sold_date, 20)}` : ""}${num(c.sqft) ? `, ${num(c.sqft)} sq ft` : ""}${c.condition && c.condition !== "unknown" ? `, ${clean(c.condition, 20)}` : ""}${num(c.distance) != null ? `, ${num(c.distance).toFixed(2)} mi away` : ""}`),
+        widening
+          ? `Earlier searches already covered up to ${inner} mile(s). Look ONLY for additional sales farther out, roughly ${inner} to ${outer} miles from the subject.`
+          : `Look only for additional comps that are not in this list.`,
+        `Your "arv" must weigh ALL comps together: the ones listed above plus any new ones you find.`,
+      ]
+    : [];
   const lines = [
     `Find SOLD comparable properties for an after-repair value (ARV) on a fix-and-flip loan.`,
     ``,
@@ -21,8 +36,9 @@ export function buildPrompt(b) {
     `- Within about ${num(b.radius) || 1} mile(s) of the subject, same town/neighborhood when possible. The app measures exact distance afterwards.`,
     `- Similar property type, size within about 20% of the subject's square feet, similar bed/bath count and age.`,
     `- Prefer renovated/updated sales for ARV.`,
-    `- Find up to ${num(b.count) || 6} comps.`,
+    existing.length ? `- Find up to ${num(b.count) || 6} ADDITIONAL comps (fewer is fine if there aren't good ones).` : `- Find up to ${num(b.count) || 6} comps.`,
     b.notes ? `- Extra instructions from the underwriter: ${clean(b.notes, 600)}` : ``,
+    ...haveBlock,
     ``,
     `THIS IS STEP 1 OF 2. Your job is to pick the best candidates quickly. A second step will open each comp's own property pages to verify details and condition, so do NOT open individual property pages here except one for the subject if its size is unknown.`,
     `- Work from "recently sold" list pages for the subject's ZIP/neighborhood: Redfin and Realtor.com first, then Homes.com and Zillow.`,
@@ -36,7 +52,7 @@ export function buildPrompt(b) {
     ` "arv":{"low":number|null,"point":number|null,"high":number|null,"method":"one or two sentences"},`,
     ` "warnings":[short strings]}`,
   ];
-  return lines.filter((l) => l !== "").join("\n").replace(/\n(SEARCH RULES|THIS IS STEP|OUTPUT)/g, "\n\n$1");
+  return lines.filter((l) => l !== "").join("\n").replace(/\n(SEARCH RULES|ALREADY FOUND|THIS IS STEP|OUTPUT)/g, "\n\n$1");
 }
 
 export function normalize(data) {
