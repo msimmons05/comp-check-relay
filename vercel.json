@@ -1,5 +1,6 @@
 {
   "functions": {
-    "api/comps.js": { "maxDuration": 300 }
+    "api/comps.js": { "maxDuration": 300 },
+    "api/verify.js": { "maxDuration": 300 }
   }
 }
