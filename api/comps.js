@@ -46,15 +46,25 @@ function buildPrompt(b) {
     `- Find up to ${num(b.count) || 6} comps.`,
     b.notes ? `- Extra instructions from the underwriter: ${clean(b.notes, 600)}` : ``,
     ``,
-    `HOW TO SEARCH: search Redfin, Zillow, Realtor.com, Homes.com and similar sites for recently sold homes in the subject's ZIP code and neighborhood. Fetch "recently sold" pages and individual property pages to confirm the sold price and sold date. Use only facts you actually saw on a page. If a value is not shown, use null. Never invent a sale.`,
+    `CONDITION: judge condition only from the listing description/remarks text, never guess.`,
+    `- "renovated" only if the text says updated, remodeled, renovated, rehabbed, new kitchen/baths/flooring, flip, etc.`,
+    `- "distressed" if it says as-is, needs work, fixer, TLC, cash only, investor special, foreclosure, estate sale needing updates.`,
+    `- "average" if it says original, dated, well maintained without updates, or similar.`,
+    `- Otherwise "unknown". Put the exact words you relied on (max 15 words) in condition_evidence.`,
+    ``,
+    `HOW TO SEARCH (be efficient, aim to finish quickly):`,
+    `- Start from "recently sold" list pages for the subject's ZIP/neighborhood on Redfin and Realtor.com first, then Homes.com and Zillow. List pages show many sales at once; prefer them over opening house after house.`,
+    `- Confirm each comp's sale on at least TWO different sites when you can (e.g. Redfin + Realtor.com). Record every site where you saw the sale in "sources". If sites disagree on price or date, say so in notes and use the figure from the most detailed page.`,
+    `- Open an individual property page only when you need its description for condition, or to confirm a sale you can't confirm otherwise.`,
+    `- Use only facts you actually saw on a page. If a value is not shown, use null. Never invent a sale.`,
     ``,
     `OUTPUT: after researching, reply with ONLY one JSON object (no prose, no markdown fences) in exactly this shape:`,
     `{"subject":{"beds":number|null,"baths":number|null,"sqft":number|null,"year_built":number|null,"notes":string},`,
-    ` "comps":[{"address":"full street address, city, state ZIP","sold_price":number,"sold_date":"YYYY-MM-DD or YYYY-MM or null","beds":number|null,"baths":number|null,"sqft":number|null,"year_built":number|null,"property_type":string|null,"condition":"renovated"|"average"|"distressed"|"unknown","notes":"why it is or isn't a strong comp, max 25 words","source_url":"the page where you confirmed the sale"}],`,
+    ` "comps":[{"address":"full street address, city, state ZIP","sold_price":number,"sold_date":"YYYY-MM-DD or YYYY-MM or null","beds":number|null,"baths":number|null,"sqft":number|null,"year_built":number|null,"property_type":string|null,"condition":"renovated"|"average"|"distressed"|"unknown","condition_evidence":string|null,"notes":"why it is or isn't a strong comp, max 25 words","sources":[{"site":"Redfin|Realtor.com|Zillow|Homes.com|other name","url":"page where you saw the sale"}]}],`,
     ` "arv":{"low":number|null,"point":number|null,"high":number|null,"method":"one or two sentences"},`,
     ` "warnings":[strings]}`,
   ];
-  return lines.filter((l) => l !== "").join("\n").replace(/\n(SEARCH RULES|HOW TO SEARCH|OUTPUT)/g, "\n\n$1");
+  return lines.filter((l) => l !== "").join("\n").replace(/\n(SEARCH RULES|CONDITION|HOW TO SEARCH|OUTPUT)/g, "\n\n$1");
 }
 
 function extractJson(text) {
@@ -82,8 +92,12 @@ function normalize(data) {
         year_built: num(c.year_built),
         property_type: c.property_type ? clean(c.property_type, 40) : null,
         condition: ["renovated", "average", "distressed"].includes(c.condition) ? c.condition : "unknown",
+        condition_evidence: c.condition_evidence ? clean(c.condition_evidence, 200) : null,
         notes: clean(c.notes, 300),
-        source_url: /^https?:\/\//.test(c.source_url || "") ? clean(c.source_url, 500) : "",
+        sources: (Array.isArray(c.sources) ? c.sources : c.source_url ? [{ site: "", url: c.source_url }] : [])
+          .filter((x) => x && /^https?:\/\//.test(x.url || ""))
+          .slice(0, 5)
+          .map((x) => ({ site: clean(x.site, 30) || (x.url.match(/\/\/(?:www\.)?([^/]+)/) || [])[1] || "Source", url: clean(x.url, 500) })),
       })),
     arv: {
       low: num(data?.arv?.low),
@@ -110,8 +124,8 @@ async function callClaude(messages) {
         "You are a careful residential real estate underwriting analyst for a private hard money lender. You find closed sales only, verify every figure on a source page, and never fabricate data.",
       messages,
       tools: [
-        { type: "web_search_20260318", name: "web_search", max_uses: 10, user_location: { type: "approximate", country: "US" } },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 12, max_content_tokens: 40000 },
+        { type: "web_search_20260318", name: "web_search", max_uses: 8, user_location: { type: "approximate", country: "US" } },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 10, max_content_tokens: 20000 },
       ],
     }),
   });
