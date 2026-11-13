@@ -41,7 +41,8 @@ export function buildPrompt(b) {
     `- STRICT DATE LIMIT: sold on or after ${cutoff(num(b.months) || 6)} (the last ${num(b.months) || 6} months; today is ${new Date().toISOString().slice(0, 10)}). Never return an older sale, even if you can't find enough comps. If there are too few, return fewer and add a warning.`,
     `- Within about ${num(b.radius) || 1} mile(s) of the subject, same town/neighborhood when possible. The app measures exact distance afterwards.`,
     `- Similar property type and age, size within about 20-25% of the subject's square feet.`,
-    `- BEDROOMS: within one bedroom of the subject (e.g. a 4-bed subject takes 3, 4 or 5-bed comps). Never return a comp 2+ bedrooms off unless there is truly nothing closer in the area, and then say so in its notes. Bathrooms can differ by one.`,
+    `- BEDROOMS: prefer comps within one bedroom of the subject (e.g. a 4-bed subject: 3, 4 or 5 beds). Use a comp 2+ bedrooms off only when closer matches run out, and say so in its notes. Bathrooms can differ by one.`,
+    `- The date window and radius are firm. Size, beds, baths and condition are preferences: if they would leave you with fewer than 3 comps, still return the best available closed sales within the date window and radius, and explain in each comp's notes what doesn't match. The app flags mismatches for the underwriter. Return an empty list ONLY if there are truly no closed sales in the window and radius, and then say exactly what you searched in warnings.`,
     `- Prefer renovated/updated sales for ARV.`,
     existing.length ? `- Find up to ${num(b.count) || 6} ADDITIONAL comps (fewer is fine if there aren't good ones).` : `- Find up to ${num(b.count) || 6} comps.`,
     b.notes ? `- Extra instructions from the underwriter: ${clean(b.notes, 600)}` : ``,
@@ -94,7 +95,7 @@ export default async function handler(req, res) {
       maxTokens: 8000,
       tools: [
         { type: "web_search_20260318", name: "web_search", max_uses: 5, user_location: { type: "approximate", country: "US" } },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 10000 },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 15000 },
       ],
     });
     const parsed = extractJson(text);
