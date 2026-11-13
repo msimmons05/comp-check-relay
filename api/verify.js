@@ -1,5 +1,5 @@
 // Step 2: verify ONE comp's sale on its own property pages (price, date, size, condition).
-import { gate, runClaude, extractJson, num, clean, normSources, CONDITIONS, MODEL } from "../lib/claude.js";
+import { gate, runClaude, extractJson, num, clean, normSources, CONDITIONS, VERIFY_MODEL } from "../lib/claude.js";
 
 export function buildVerifyPrompt(b) {
   const c = b.comp || {};
@@ -56,15 +56,16 @@ export default async function handler(req, res) {
   try {
     const { text, usage } = await runClaude({
       prompt: buildVerifyPrompt(body),
+      model: VERIFY_MODEL,
       maxTokens: 3000,
       tools: [
-        { type: "web_search_20260318", name: "web_search", max_uses: 6, user_location: { type: "approximate", country: "US" } },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 15000 },
+        { type: "web_search_20260318", name: "web_search", max_uses: 4, user_location: { type: "approximate", country: "US" } },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 4, max_content_tokens: 8000 },
       ],
     });
     const parsed = extractJson(text);
     if (!parsed) return res.status(502).json({ error: "Couldn't read the verification result.", raw: text.slice(-800), usage });
-    return res.status(200).json({ ...normalizeVerify(parsed), usage, model: MODEL });
+    return res.status(200).json({ ...normalizeVerify(parsed), usage, model: VERIFY_MODEL });
   } catch (e) {
     return res.status(e.status && e.status < 500 ? 502 : 500).json({ error: e.message || "Unexpected error." });
   }

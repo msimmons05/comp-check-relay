@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       maxTokens: 8000,
       tools: [
         { type: "web_search_20260318", name: "web_search", max_uses: 5, user_location: { type: "approximate", country: "US" } },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 20000 },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 6, max_content_tokens: 10000 },
       ],
     });
     const parsed = extractJson(text);
