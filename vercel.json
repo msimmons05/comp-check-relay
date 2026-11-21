@@ -8,6 +8,9 @@
     },
     "api/arv.js": {
       "maxDuration": 60
+    },
+    "api/checks.js": {
+      "maxDuration": 30
     }
   }
 }
